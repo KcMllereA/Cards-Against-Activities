@@ -50,7 +50,7 @@ export default function Profile({ id, data, winner, host, scale = 1.25, hover, r
                 position: 'absolute',
                 zIndex: "0"
             },
-            src: "pfp.png"
+            src: data.avatar
         }),
         data?.name && hover && e("div", {
             className: "profileName",

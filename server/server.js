@@ -9,11 +9,12 @@ import { CHOOSING, CHOSEN, LEADERBOARD, LOBBY, PICKING, STARTING, shuffle } from
 const whites = fs.readFileSync("./whites.txt", { encoding: "utf-8" });
 const blacks = fs.readFileSync("./blacks.txt", { encoding: "utf-8" });
 
-const whitesArr = whites.split("\n").map((x) => x.trim());
-const blacksArr = blacks.split("\n").map((x) => x.trim());
+const whitesArr = whites.split("\n").map(x => x.trim());
+const blacksArr = blacks.split("\n").map(x => x.trim());
 
 const whiteInds = Array.from({ length: whitesArr.length }, (x, i) => i);
 const blackInds = Array.from({ length: blacksArr.length }, (x, i) => i);
+
 
 dotenv.config({ path: "../.env" });
 
@@ -58,10 +59,11 @@ class JSet extends Set {
     }
 }
 
+
 /**
  * @type {Object.<string, WebSocket>}
  */
-const clients = (global.clients = Object.create(null));
+const clients = global.clients = Object.create(null);
 /**
  * @type {Set.<string>}
  */
@@ -77,8 +79,6 @@ const ids = Object.create(null);
 
 const TimeoutClass = setTimeout(() => {}, 0).constructor;
 
-const CARDS = 30;
-
 class Room {
     name;
     channelId;
@@ -86,10 +86,12 @@ class Room {
     users = new JSet();
     userData = Object.create(null);
     nextTimestamp = -1;
+    starting = false;
+    started = false;
     roundsLeft = 10;
     whiteCards = shuffle([...whiteInds]);
     blackCards = shuffle([...blackInds]);
-    cardsPerUser = CARDS;
+    cardsPerUser = 10;
     promptCard;
     history = [];
     needed = 0;
@@ -97,7 +99,6 @@ class Room {
     winner = null;
     betWon = false;
     rounds = 10;
-    shuffled = [];
     constructor(name, channelId) {
         this.name = name;
         this.channelId = channelId;
@@ -107,65 +108,47 @@ class Room {
         return Math.max(blacksArr[card].match(/ *_+ */g)?.length || 1, 1);
     }
     updateUsers() {
-        this.host = Math.max(0, this.host % this.users.size);
         const data = Object.assign({}, this);
         let s = JSON.stringify({ event: "roomData", data }, (key, value) => {
             if (value instanceof TimeoutClass) return;
             return value;
         });
-        for (const user of this.users) clients[ids[user]].send(s);
+        for (const user of this.users)
+            clients[ids[user]].send(s);
     }
     isHost(id) {
         let i = 0;
-        for (let user of this.users) if (i++ == this.host) return user == id;
+        for (let user of this.users)
+            if (i++ == this.host)
+                return user == id;
         // return id == [...this.users][this.host]
     }
     getHost() {
         let i = 0;
-        for (let user of this.users) if (i++ == this.host) return user;
+        for (let user of this.users)
+            if (i++ == this.host)
+                return user;
         // return id == [...this.users][this.host]
     }
     addUser(id, avatar, name) {
-        this.users.add(id);
-        this.cardsPerUser = Math.min(CARDS, Math.floor(whitesArr.length / (this.users.size - 1)));
-        if (!(id in this.userData)) {
-            this.userData[id] = {
-                deck: [],
-                score: 0,
-                cards: [],
-                bet: [],
-                ready: false,
-                avatar,
-                name,
-            };
-            while (this.userData[id].deck.length < this.cardsPerUser) this.userData[id].deck.push(this.whiteCards.pop());
+        this.userData[id] = {
+            deck: [],
+            score: 0,
+            cards: [],
+            bet: [],
+            ready: false,
+            avatar,
+            name
         }
-        this.shuffled = shuffle(this.shuffled.concat(id));
+        this.users.add(id);
+        this.cardsPerUser = Math.min(10, Math.floor(whitesArr.length / (this.users.size - 1)));
         this.updateUsers();
     }
     removeUser(id) {
-        // while (this.userData[id].deck.length > 0) this.whiteCards.unshift(this.userData[id].deck.pop());
-        // delete this.userData[id];
-        if ([...this.users].indexOf(id) < this.host) this.host--;
+        while (this.userData[id].deck.length > 0) this.whiteCards.unshift(this.userData[user].deck.pop());
+        delete this.userData[id];
         this.users.delete(id);
-        this.shuffled.splice(this.shuffled.indexOf(id), 1);
-        this.cardsPerUser = Math.min(CARDS, Math.floor(whitesArr.length / (this.users.size - 1)));
-        if (this.users.size == 1) {
-            this.state = LOBBY;
-            this.nextTimestamp = -1;
-            this.roundsLeft = this.rounds;
-            for (const user in this.userData) {
-                while (this.userData[user].deck.length) this.whiteCards.unshift(this.userData[user].deck.pop());
-                Object.assign(this.userData[user], {
-                    cards: [],
-                    bet: [],
-                    ready: false,
-                    score: 0
-                });
-            }
-            clearTimeout(this.winnerTimeout);
-            clearTimeout(this.startingTimeout);
-        }
+        this.cardsPerUser = Math.min(10, Math.floor(whitesArr.length / (this.users.size - 1)));
         this.updateUsers();
     }
     startingTimeout = null;
@@ -175,7 +158,7 @@ class Room {
         if (this.state == PICKING) {
             if (this.userData[id].cards.length != this.needed) this.userData[id].ready = false;
             else {
-                this.userData[this.getHost()] && (this.userData[this.getHost()].ready = false);
+                this.userData[this.getHost()].ready = false;
                 if (this.numReady() == this.users.size - 1) {
                     this.state = CHOOSING;
                 }
@@ -187,9 +170,9 @@ class Room {
             }
         } else if (state && this.everyoneReady()) {
             this.nextTimestamp = Date.now() + 5000;
+            this.starting = true;
             this.state = STARTING;
             this.history = [];
-            for (const user of this.users) this.userData[user].score = 0;
             this.startingTimeout = setTimeout(() => {
                 this.state = PICKING;
                 this.nextTimestamp = -1;
@@ -198,6 +181,7 @@ class Room {
             }, 5000);
         } else {
             this.nextTimestamp = -1;
+            this.starting = false;
             this.state = LOBBY;
         }
         this.updateUsers();
@@ -212,7 +196,7 @@ class Room {
             this.betWon = bet;
 
             this.userData[winner].score++;
-            this.history.push([this.promptCard, winner, [...this.userData[winner].cards]]);
+            this.history.push([this.promptCard, winner, this.userData[winner][bet ? "bet" : "cards"]]);
 
             this.nextTimestamp = Date.now() + 10000;
             this.winnerTimeout = setTimeout(() => {
@@ -222,28 +206,24 @@ class Room {
                 if (--this.roundsLeft == 0) {
                     this.state = LEADERBOARD;
                     this.roundsLeft = this.rounds;
-                    for (const user in this.userData) {
-                        while (this.userData[user].deck.length) this.whiteCards.unshift(this.userData[user].deck.pop());
-                        Object.assign(this.userData[user], {
-                            cards: [],
-                            bet: [],
-                            ready: false,
-                        });
-                    }
                 } else this.startRound();
                 this.updateUsers();
-            }, 10000);
+            }, 10000)
             this.updateUsers();
         }, 5000);
         this.updateUsers();
     }
     numReady() {
         let num = 0;
-        for (const user of this.users) if (this.userData[user].ready) num++;
+        for (const user of this.users)
+            if (this.userData[user].ready)
+                num++;
         return num;
     }
     everyoneReady() {
-        for (const user of this.users) if (!this.userData[user].ready) return false;
+        for (const user of this.users)
+            if (!this.userData[user].ready)
+                return false;
         return true;
     }
     setRounds(id, n) {
@@ -254,18 +234,18 @@ class Room {
     startRound() {
         for (const user of this.users) {
             this.userData[user].ready = false;
-            this.userData[user].deck = this.userData[user].deck.filter((x) => !this.userData[user].cards.includes(x) && !this.userData[user].bet.includes(x));
-            while (this.userData[user].deck.length < this.cardsPerUser) this.userData[user].deck.push(this.whiteCards.pop());
+            this.userData[user].deck = this.userData[user].deck.filter(x => !this.userData[user].cards.includes(x) && !this.userData[user].bet.includes(x));
+            while (this.userData[user].deck.length < this.cardsPerUser)
+                this.userData[user].deck.push(this.whiteCards.pop());
             while (this.userData[user].cards.length > 0) this.whiteCards.unshift(this.userData[user].cards.pop());
             while (this.userData[user].bet.length > 0) this.whiteCards.unshift(this.userData[user].bet.pop());
         }
-        shuffle(this.shuffled);
         this.promptCard = this.blackCards.pop();
         this.needed = Room.numPick(this.promptCard);
         this.updateUsers();
     }
     submitCards(id, cards) {
-        if (this.isHost(id) || this.userData[id]?.ready) return;
+        if (this.isHost(id)) return;
         this.userData[id].cards = cards;
         this.userData[id].bet = [];
         this.updateUsers();
@@ -285,22 +265,17 @@ class Room {
 }
 
 function guid() {
-    return `${randHex(8)}-${randHex(4)}-${randHex(4)}-${randHex(4)}-${randHex(12)}`;
+    return `${randHex(8)}-${randHex(4)}-${randHex(4)}-${randHex(4)}-${randHex(12)}`
 }
 
 function randHex(length) {
-    return Math.random()
-        .toString(16)
-        .slice(2, 2 + length);
+    return Math.random().toString(16).slice(2, 2 + length);
 }
 
-setInterval(
-    (s) => {
-        for (const uid of uids) clients[uid].send(s);
-    },
-    30000,
-    '{"event":"ping"}'
-);
+setInterval(s => {
+    for (const uid of uids)
+        clients[uid].send(s);
+}, 30000, '{"event":"ping"}');
 
 router.get("/api/whites", (req, res) => {
     res.status(200).send(whites);
@@ -309,66 +284,63 @@ router.get("/api/blacks", (req, res) => {
     res.status(200).send(blacks);
 });
 
-router.ws(
-    "/api/ws",
-    /**@param {WebSocket} ws*/ (ws) => {
-        const uuid = guid();
-        clients[uuid] = ws;
-        uids.add(uuid);
-        ws.send(JSON.stringify({ event: "clientId", data: uuid }));
-        ws.on("message", (data) => {
-            if (data == '{"event":"pong"}') return;
-            let msg;
-            try {
-                msg = JSON.parse(data);
-            } catch {
-                msg = data;
-            }
-            if (msg.event) {
-                switch (msg.event) {
-                    case "userData":
-                        ws.data = msg.data;
-                        ids[msg.data.userId] = uuid;
-                        if (!(msg.data.channelId in rooms)) rooms[msg.data.channelId] = new Room(msg.data.roomName, msg.data.channelId);
-                        const room = rooms[msg.data.channelId];
-                        room.addUser(msg.data.userId, msg.data.avatar, msg.data.name);
-                        return;
-                    case "ready":
-                        rooms[ws.data.channelId].readyUser(ws.data.userId, msg.data);
-                        return;
-                    case "reqUserData": {
-                        ws.send(JSON.stringify({ event: "resUserData", data: clients[ids[msg.data]].data }));
-                        return;
-                    }
-                    case "submitCards": {
-                        rooms[ws.data.channelId].submitCards(ws.data.userId, msg.data);
-                        return;
-                    }
-                    case "setRounds": {
-                        rooms[ws.data.channelId].setRounds(ws.data.userId, msg.data);
-                        return;
-                    }
-                    case "chooseWinner": {
-                        rooms[ws.data.channelId].chooseWinner(ws.data.userId, msg.data);
-                        return;
-                    }
+router.ws("/api/ws", /**@param {WebSocket} ws*/(ws) => {
+    const uuid = guid();
+    clients[uuid] = ws;
+    uids.add(uuid);
+    ws.send(JSON.stringify({ event: "clientId", data: uuid }));
+    ws.on("message", data => {
+        if (data == '{"event":"pong"}') return;
+        let msg;
+        try {
+            msg = JSON.parse(data);
+        } catch {
+            msg = data;
+        }
+        if (msg.event) {
+            switch (msg.event) {
+                case "userData":
+                    ws.data = msg.data;
+                    ids[msg.data.userId] = uuid;
+                    if (!(msg.data.channelId in rooms)) rooms[msg.data.channelId] = new Room(msg.data.roomName, msg.data.channelId);
+                    const room = rooms[msg.data.channelId];
+                    room.addUser(msg.data.userId, msg.data.avatar, msg.data.name);
+                    return;
+                case "ready":
+                    rooms[ws.data.channelId].readyUser(ws.data.userId, msg.data);
+                    return;
+                case "reqUserData": {
+                    ws.send(JSON.stringify({ event: "resUserData", data: clients[ids[msg.data]].data }));
+                    return;
+                }
+                case "submitCards": {
+                    rooms[ws.data.channelId].submitCards(ws.data.userId, msg.data);
+                    return;
+                }
+                case "setRounds": {
+                    rooms[ws.data.channelId].setRounds(ws.data.userId, msg.data);
+                    return;
+                }
+                case "chooseWinner": {
+                    rooms[ws.data.channelId].chooseWinner(ws.data.userId, msg.data);
+                    return;
                 }
             }
-            console.log(msg, JSON.stringify(data));
-        });
-        ws.on("close", () => {
-            delete clients[uuid];
-            uids.delete(uuid);
-            if (ws.data?.channelId in rooms) {
-                const room = rooms[ws.data.channelId];
-                room.removeUser(ws.data.userId);
-                if (room.users.size == 0) {
-                    delete rooms[ws.data.channelId];
-                }
+        }
+        console.log(msg, JSON.stringify(data));
+    });
+    ws.on("close", () => {
+        delete clients[uuid];
+        uids.delete(uuid);
+        if (ws.data?.channelId in rooms) {
+            const room = rooms[ws.data.channelId];
+            room.removeUser(ws.data.userId);
+            if (room.users.size == 0) {
+                delete rooms[room.id];
             }
-        });
-    }
-);
+        }
+    });
+});
 
 // app.use("/discord/*", function (req, res) {
 //     console.log(`https://discord.com/${req.originalUrl.slice("/discord/".length)}`);
@@ -382,6 +354,7 @@ app.use("/", router);
 // app.use("/api/blacks", function (req, res) {
 //     res.send(blacks)
 // });
+
 
 app.listen(port, () => {
     console.log(`Server listening at http://localhost:${port}`);

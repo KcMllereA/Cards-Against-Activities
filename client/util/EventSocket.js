@@ -1,13 +1,10 @@
 export default class EventSocket extends WebSocket {
     listeners = {};
-    #connectedResolve;
-    connectedSignal = new Promise(r => this.#connectedResolve = r);
     constructor(...args) {
         super(...args);
 
         this.onopen = () => {
             console.log("Connected to socket server.");
-            this.#connectedResolve();
         }
         this.onmessage = (msg) => {
             try {
@@ -21,11 +18,6 @@ export default class EventSocket extends WebSocket {
         }
         this.onclose = () => {
             console.log("Disconnected from socket server.");
-            throw new Error("Socket connection closed.");
-        }
-        this.onerror = (err) => {
-            console.error("Socket error:", err);
-            throw new Error("Socket error.");
         }
     }
 

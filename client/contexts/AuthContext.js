@@ -42,7 +42,7 @@ export function useAuth() {
     return useContext(AuthenticatedContext);
 }
 
-export function AuthenticatedContextProvider() {
+export function AuthenticatedContextProvider({ children }) {
     const [auth, setAuth] = useState(null);
     const [page, setPage] = useState(LOBBY);
     const [room, setRoom] = useState({
@@ -76,6 +76,9 @@ export function AuthenticatedContextProvider() {
     }, []);
     const setRounds = useCallback((rounds) => {
         socketRef.current.emit("setRounds", rounds);
+    }, []);
+    const chooseWinner = useCallback((id) => {
+        socketRef.current.emit("chooseWinner", id);
     }, []);
 
     useEffect(() => {
@@ -155,7 +158,10 @@ export function AuthenticatedContextProvider() {
             });
             socket.on("roomData", data => {
                 setRoom(data);
-                if (data.state != LOBBY && data.state != LEADERBOARD) setPage(data.state);
+                setPage(p => {
+                    if (p == LOBBY && data.state == LEADERBOARD || data.state == LOBBY && p == LEADERBOARD) return p;
+                    return data.state;
+                });
             });
             uuid = await uuid;
 
@@ -182,8 +188,7 @@ export function AuthenticatedContextProvider() {
             socket.emit("userData", data);
 
             // Finally, we construct our authenticatedContext object to be consumed throughout the app
-            setAuth(Object.assign(newAuth, {
-                page,
+            setAuth(Object.assign(newAuth, data, {
                 guildMember, data, socket,
                 getUser: async id => userData[id] || new Promise(r => {
                     signals[id] = r;
@@ -198,8 +203,10 @@ export function AuthenticatedContextProvider() {
         }
     }, []);
 
-    return createElement(AuthenticatedContext.Provider, { value: Object.assign({
-        room,
-        toggleReady, submitCards, setRounds
-    }, auth) }, auth && children);
+    return createElement(AuthenticatedContext.Provider, {
+        value: Object.assign({
+            room, page,
+            toggleReady, submitCards, setRounds, chooseWinner, setPage
+        }, auth)
+    }, auth && room && children);
 }

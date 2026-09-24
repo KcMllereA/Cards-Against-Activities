@@ -9,7 +9,7 @@ export default function Chosen() {
     const [timer, setTimer] = useState("1:00");
     const timerRef = useRef();
     useEffect(() => {
-        auth.room.nextTimestamp = Date.now() + 10000;
+        clearInterval(timerRef.current);
         timerRef.current = setInterval(() => {
             let time = Math.max(auth.room.nextTimestamp - Date.now(), 0);
             setTimer(parseTime(time));
@@ -17,7 +17,7 @@ export default function Chosen() {
         return () => {
             clearInterval(timerRef.current);
         }
-    }, []);
+    }, [auth.room?.nextTimestamp]);
     const curHist = auth.room.history[auth.room.history.length - 1];
     const winner = auth.room.userData[curHist[1]];
     return auth.room && e("div", {
@@ -77,7 +77,7 @@ export default function Chosen() {
                         gap: "calc(var(--global) * 2)"
                     }
                 },
-                    e(Profile, { id: curHist[1], data: winner, scale: 0.70, hover: false }),
+                    e(Profile, { id: curHist[1], data: winner, ready: false, scale: 0.70, hover: false }),
                     e("div", {
                         className: "leaderboardName",
                         style: {

@@ -7,30 +7,18 @@
     --global2: max(1vw, 1vh);
 }
 
-/* *, *::after, *::before {
-    box-sizing: border-box;
-} */
-
 body {
-    --hue: 235;
-    --saturation: 0.86;
-    --light: 0.5;
+    --hue: 276;
     margin: 0;
     background: radial-gradient(rgb(32, 32, 32) 50%, black);
-    background: radial-gradient(hsl(var(--hue), calc(61% * var(--saturation)), calc(100% * var(--light))) 50%, hsl(var(--hue), calc(88% * var(--saturation)), calc(56% * var(--light))));
-    overflow-x: hidden;
-}
-
-html, body {
-    width: 100vw;
-    min-height: 100vh;
+    background: radial-gradient(hsl(var(--hue), 61%, 41%) 50%, hsl(var(--hue), 88%, 23%));
 }
 
 .gameContainer {
     background: #ccacff;
     position: relative;
     margin: 0;
-    width: 100%;
+    width: 100vw;
     height: 100vh;
     padding: 0;
 }
@@ -250,6 +238,18 @@ input[type=number] {
     text-align: center;
 }
 
+.standingPlace {
+    font-size: calc(var(--global) * 4);
+    position: relative;
+}
+
+.standingPlace:after {
+    content: attr(ordinal);
+    font-size: 0.5em;
+    position: absolute;
+    top: calc(var(--global) * 0.5);
+}
+
 .pushy {
     transition: 0.5s;
     scale: 1;
@@ -263,85 +263,4 @@ input[type=number] {
 .pushy:active {
     transition: 0.1s;
     scale: 0.95
-}
-
-@keyframes scaleIn {
-    0% {
-        transform: scale(0.5);
-    }
-
-    100% {
-        transform: scale(1);
-    }
-}
-
-@keyframes flyInBottom {
-    0% {
-        transform: translateY(80%);
-        opacity: 0;
-    }
-
-    100% {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes windowIn {
-    0% {
-        transform: scale(0);
-    }
-
-    100% {
-        transform: scale(1);
-    }
-}
-
-@keyframes dropInBounce {
-    0% {
-        transform: translateY(-100%);
-        opacity: 0;
-    }
-
-    100% {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-.saturationPicker>div>div:nth-child(1)>div {
-    background: none !important;
-}
-
-.lightPicker>div>div:nth-child(1) {
-    background: black;
-}
-
-@keyframes blackThrowIn {
-    0% {
-        transform: translate(-100%, -100%) rotate(-120deg);
-    }
-    100% {
-        transform: translate(0, 0) rotate(-8deg);
-    }
-}
-
-@keyframes whiteChoosingRotateIn {
-    0% {
-        transform: scale(0);
-    }
-    100% {
-        transform: scale(1) rotate(calc(var(--angle) * 1deg));
-    }
-}
-
-@keyframes whiteCardThrowIn {
-    0% {
-        transform: translate(calc(var(--flip) * 100%), -100%) rotate(calc(var(--flip) * 120deg));
-        opacity: 1;
-    }
-    100% {
-        transform: translate(0, 0) rotate(calc(var(--angle) * 1deg)) translateX(calc(var(--offset) * 1px));
-        opacity: 1;
-    }
 }

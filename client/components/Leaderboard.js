@@ -136,7 +136,7 @@ export function ChosenBoard({ users, data, host }) {
                     fontSize: "calc(var(--global) * 2.5)"
                 }
             },
-                e(Profile, { id: user, data: data[user], winner: places[i] == 1, host: user == host, scale: 0.6, hover: false }),
+                e(Profile, { id: user, data: data[user], winner: places[i] == 1, host: user == host, scale: 0.6, ready: false, hover: false }),
                 e("div", {
                     className: "leaderboardData",
                     style: {
@@ -221,7 +221,7 @@ function Standing({ place, user, min }) {
     );
 }
 
-export function ResultsBoard({ users, data, host }) {
+export function ResultsBoard({ users, data, toLobby }) {
     const [board, setBoard] = useState(users);
     const [places, setPlaces] = useState([]);
     const min = useRef();
@@ -308,6 +308,7 @@ export function ResultsBoard({ users, data, host }) {
             })
         ),
         e("div", {
+            onClick: toLobby,
             className: "pushy",
             style: {
                 color: "black",

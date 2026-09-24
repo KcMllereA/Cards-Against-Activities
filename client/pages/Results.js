@@ -1,6 +1,6 @@
 import { createElement as e } from "react";
 import { useAuth } from "../contexts/AuthContext.js";
-import { blacks, whites } from "../util.js";
+import { LOBBY, blacks, whites } from "../util.js";
 import Profile from "../components/Profile.js";
 import { ResultsBoard } from "../components/Leaderboard.js";
 
@@ -137,7 +137,7 @@ export default function Results() {
                     // height: "30vw"
                 }
             },
-                e(ResultsBoard, { users: auth.room.users, data: auth.room.userData, host: auth.room.users[auth.room.host] })
+                e(ResultsBoard, { users: auth.room.users, data: auth.room.userData, host: auth.room.users[auth.room.host], toLobby: () => auth.setPage(LOBBY) })
             )
         )
     );

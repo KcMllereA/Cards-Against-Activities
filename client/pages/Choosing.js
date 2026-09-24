@@ -8,6 +8,7 @@ export function Waiting() {
     const [timer, setTimer] = useState("1:00");
     const timerRef = useRef();
     useEffect(() => {
+        clearInterval(timerRef.current);
         timerRef.current = setInterval(() => {
             let time = auth.room.nextTimestamp - Date.now();
             if (time < 0) setTimer("");
@@ -16,7 +17,7 @@ export function Waiting() {
         return () => {
             clearInterval(timerRef.current);
         }
-    }, []);
+    }, [auth.room?.nextTimestamp]);
     return auth.room && e("div", {
         style: {
             width: "100vw",
@@ -130,6 +131,7 @@ export function Choosing() {
     const timerRef = useRef();
     const lockedIn = auth.room.userData[auth.userId]?.ready;
     useEffect(() => {
+        clearInterval(timerRef.current);
         timerRef.current = setInterval(() => {
             let time = auth.room.nextTimestamp - Date.now();
             if (time < 0) setTimer("");
@@ -138,10 +140,10 @@ export function Choosing() {
         return () => {
             clearInterval(timerRef.current);
         }
-    }, []);
-    useEffect(() => {
-        auth.room.nextTimestamp = lockedIn ? Date.now() + 5000 : 0;
-    }, [lockedIn]);
+    }, [auth.room?.nextTimestamp]);
+    // useEffect(() => {
+    //     auth.room.nextTimestamp = lockedIn ? Date.now() + 5000 : 0;
+    // }, [lockedIn]);
     return auth.room && e("div", {
         style: {
             width: "100vw",
@@ -180,7 +182,10 @@ export function Choosing() {
                         fontSize: "calc(var(--global) * 2.75)",
                     }
                 }, timer),
-                selecting && e("div", { className: lockedIn ? "unready" : "ready", onClick: auth?.toggleReady, style: {
+                selecting && e("div", { className: lockedIn ? "unready" : "ready", onClick: () => {
+                    if (!lockedIn) auth.chooseWinner(selecting);
+                    auth?.toggleReady();
+                }, style: {
                     border: "none",
                     outline: "none",
                     height: "calc(var(--global) * 6.5)",

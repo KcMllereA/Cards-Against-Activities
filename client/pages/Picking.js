@@ -5,11 +5,10 @@ import Leaderboard from "../components/Leaderboard.js";
 
 export function Picking() {
     const auth = useAuth();
-    const [deck, setDeck] = useState([]);
     const [timer, setTimer] = useState("1:00");
     const timerRef = useRef();
     useEffect(() => {
-        setDeck(shuffle(Array.from({length: whites.length}, (x, i) => i)).slice(0, 10));
+        clearInterval(timerRef.current);
         timerRef.current = setInterval(() => {
             let time = auth.room.nextTimestamp - Date.now();
             if (time < 0) setTimer("");
@@ -18,7 +17,7 @@ export function Picking() {
         return () => {
             clearInterval(timerRef.current);
         }
-    }, []);
+    }, [auth.room?.nextTimestamp]);
     return auth.room && e("div", {
         style: {
             width: "100vw",
@@ -62,28 +61,30 @@ export function Picking() {
                         fontWeight: "500",
                         fontSize: "calc(var(--global) * 2.75)",
                     }
-                }, `${auth.room.users.reduce((a, b) => (a + auth.room.userData[b].ready), 0)} / ${auth.room.users.length} Submissions`),
-                e("div", { className: auth.room.userData[auth.userId].ready ? "unready" : "ready", onClick: auth?.toggleReady, style: {
-                    border: "none",
-                    outline: "none",
-                    height: "calc(var(--global) * 6.5)",
-                    width: "calc(var(--global) * 18)",
-                    // padding: "calc(var(--global) * 2) calc(var(--global) * 4)",
-                    borderRadius: "calc(var(--global) * 1)",
-                    color: "white",
-                    fontWeight: "500",
-                    fontSize: "calc(var(--global) * 2.75)",
-                    transition: "transform 0.4s",
-                    // overflow: "hidden",
-                    position: "relative",
-                    transformStyle: "preserve-3d",
-                    cursor: "pointer",
-                    
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    zIndex: "5"
-                } },
+                }, `${auth.room.users.reduce((a, b) => (a + auth.room.userData[b].ready), 0)} / ${auth.room.users.length - 1} Submissions`),
+                e("div", {
+                    className: auth.room.userData[auth.userId].ready ? "unready" : "ready", onClick: auth?.toggleReady, style: {
+                        border: "none",
+                        outline: "none",
+                        height: "calc(var(--global) * 6.5)",
+                        width: "calc(var(--global) * 18)",
+                        // padding: "calc(var(--global) * 2) calc(var(--global) * 4)",
+                        borderRadius: "calc(var(--global) * 1)",
+                        color: "white",
+                        fontWeight: "500",
+                        fontSize: "calc(var(--global) * 2.75)",
+                        transition: "transform 0.4s",
+                        // overflow: "hidden",
+                        position: "relative",
+                        transformStyle: "preserve-3d",
+                        cursor: "pointer",
+
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        zIndex: "5"
+                    }
+                },
                     e("div", {
                         style: {
                             margin: "auto",
@@ -118,9 +119,12 @@ export function Picking() {
                     }, "Unsubmit")
                 )
             ),
-            e("div", { className: "black", style: {
-                '--size': "calc(1vh * 40 * 63 / 88)"
-            } }, blacks[auth.room.promptCard]),
+            e("div", {
+                className: "black",
+                style: {
+                    '--size': "calc(1vh * 40 * 63 / 88)"
+                }
+            }, (console.log(blacks, auth.room.promptCard), blacks[auth.room.promptCard])),
             auth.room.userData[auth.userId].cards?.length > 0 && auth.room.userData[auth.userId].cards.map((card, i) => {
                 return e("div", {
                     className: "white",
@@ -160,7 +164,7 @@ export function Picking() {
                     background: "rgb(0 0 0 / 50%)"
                 }
             },
-                deck.map(x => {
+                auth.room.userData[auth.userId]?.deck.map(x => {
                     return e("div", {
                         className: "white",
                         key: x,
@@ -184,6 +188,7 @@ export function Picked() {
     const [timer, setTimer] = useState("1:00");
     const timerRef = useRef();
     useEffect(() => {
+        clearInterval(timerRef.current);
         timerRef.current = setInterval(() => {
             let time = auth.room.nextTimestamp - Date.now();
             if (time < 0) setTimer("");
@@ -192,7 +197,7 @@ export function Picked() {
         return () => {
             clearInterval(timerRef.current);
         }
-    }, []);
+    }, [auth.room?.nextTimestamp]);
     return auth.room && e("div", {
         style: {
             width: "100vw",
@@ -232,9 +237,11 @@ export function Picked() {
                     }
                 }, timer)
             ),
-            e("div", { className: "black", style: {
-                '--size': "calc(1vh * 40 * 63 / 88)"
-            } }, blacks[auth.room.promptCard])
+            e("div", {
+                className: "black", style: {
+                    '--size': "calc(1vh * 40 * 63 / 88)"
+                }
+            }, blacks[auth.room.promptCard])
         ),
         e("div", {
             style: {
@@ -264,7 +271,7 @@ export function Picked() {
                     position: "relative"
                 }
             },
-                
+
                 // [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9]]
                 auth.room.users.map(x => {
                     return auth.room.userData[x].cards?.length > 0 && e("div", {
@@ -275,7 +282,7 @@ export function Picked() {
                             position: "relative",
                             // overflow: "hidden"
                         }
-                    }, 
+                    },
                         auth.room.userData[x].cards.slice(0, auth.room.needed).map(x => e("div", {
                             className: "white",
                             key: x,
