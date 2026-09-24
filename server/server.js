@@ -77,6 +77,8 @@ const ids = Object.create(null);
 
 const TimeoutClass = setTimeout(() => {}, 0).constructor;
 
+const CARDS = 30;
+
 class Room {
     name;
     channelId;
@@ -84,12 +86,10 @@ class Room {
     users = new JSet();
     userData = Object.create(null);
     nextTimestamp = -1;
-    starting = false;
-    started = false;
     roundsLeft = 10;
     whiteCards = shuffle([...whiteInds]);
     blackCards = shuffle([...blackInds]);
-    cardsPerUser = 20;
+    cardsPerUser = CARDS;
     promptCard;
     history = [];
     needed = 0;
@@ -127,7 +127,7 @@ class Room {
     }
     addUser(id, avatar, name) {
         this.users.add(id);
-        this.cardsPerUser = Math.min(20, Math.floor(whitesArr.length / (this.users.size - 1)));
+        this.cardsPerUser = Math.min(CARDS, Math.floor(whitesArr.length / (this.users.size - 1)));
         if (!(id in this.userData)) {
             this.userData[id] = {
                 deck: [],
@@ -149,7 +149,23 @@ class Room {
         if ([...this.users].indexOf(id) < this.host) this.host--;
         this.users.delete(id);
         this.shuffled.splice(this.shuffled.indexOf(id), 1);
-        this.cardsPerUser = Math.min(20, Math.floor(whitesArr.length / (this.users.size - 1)));
+        this.cardsPerUser = Math.min(CARDS, Math.floor(whitesArr.length / (this.users.size - 1)));
+        if (this.users.size == 1) {
+            this.state = LOBBY;
+            this.nextTimestamp = -1;
+            this.roundsLeft = this.rounds;
+            for (const user in this.userData) {
+                while (this.userData[user].deck.length) this.whiteCards.unshift(this.userData[user].deck.pop());
+                Object.assign(this.userData[user], {
+                    cards: [],
+                    bet: [],
+                    ready: false,
+                    score: 0
+                });
+            }
+            clearTimeout(this.winnerTimeout);
+            clearTimeout(this.startingTimeout);
+        }
         this.updateUsers();
     }
     startingTimeout = null;
@@ -171,7 +187,6 @@ class Room {
             }
         } else if (state && this.everyoneReady()) {
             this.nextTimestamp = Date.now() + 5000;
-            this.starting = true;
             this.state = STARTING;
             this.history = [];
             for (const user of this.users) this.userData[user].score = 0;
@@ -183,7 +198,6 @@ class Room {
             }, 5000);
         } else {
             this.nextTimestamp = -1;
-            this.starting = false;
             this.state = LOBBY;
         }
         this.updateUsers();
